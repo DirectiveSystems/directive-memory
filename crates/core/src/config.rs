@@ -51,7 +51,12 @@ impl Config {
         builder = builder.add_source(
             ::config::Environment::with_prefix("DM").separator("__")
         );
-        let cfg: Config = builder.build()?.try_deserialize()?;
+        let mut cfg: Config = builder.build()?.try_deserialize()?;
+        cfg.memory_dir = expand(&cfg.memory_dir);
+        cfg.db_path = expand(&cfg.db_path);
+        for e in &mut cfg.extra_dirs {
+            e.dir = expand(&e.dir);
+        }
         Ok(cfg)
     }
 
@@ -61,5 +66,33 @@ impl Config {
             roots.push(IndexRoot { dir: e.dir.clone(), prefix: e.prefix.clone() });
         }
         roots
+    }
+}
+
+fn expand(p: &Path) -> PathBuf {
+    let s = p.to_string_lossy();
+    match shellexpand::full(&s) {
+        Ok(expanded) => PathBuf::from(expanded.into_owned()),
+        Err(_) => p.to_path_buf(),
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn expands_tilde_in_paths() {
+        let home = std::env::var("HOME").unwrap();
+        // Env source uses `__` separator, so prefix separator is also `__`.
+        std::env::set_var("DM__MEMORY_DIR", "~/dm-test-notes");
+        std::env::set_var("DM__DB_PATH", "~/dm-test-db.sqlite");
+        std::env::set_var("DM__API_KEY", "x");
+        let cfg = Config::load(None).unwrap();
+        std::env::remove_var("DM__MEMORY_DIR");
+        std::env::remove_var("DM__DB_PATH");
+        std::env::remove_var("DM__API_KEY");
+        assert_eq!(cfg.memory_dir, PathBuf::from(format!("{home}/dm-test-notes")));
+        assert_eq!(cfg.db_path, PathBuf::from(format!("{home}/dm-test-db.sqlite")));
     }
 }
