@@ -1,4 +1,4 @@
-use crate::error::{CoreError, Result};
+use crate::error::Result;
 use sqlx::sqlite::{SqliteConnectOptions, SqlitePoolOptions};
 use sqlx::SqlitePool;
 use std::path::Path;
@@ -13,8 +13,7 @@ pub async fn open(path: &Path) -> Result<SqlitePool> {
         }
     }
     let url = format!("sqlite://{}", path.display());
-    let opts = SqliteConnectOptions::from_str(&url)
-        .map_err(|e| CoreError::Other(format!("bad sqlite url: {e}")))?
+    let opts = SqliteConnectOptions::from_str(&url)?
         .create_if_missing(true)
         .journal_mode(sqlx::sqlite::SqliteJournalMode::Wal)
         .busy_timeout(std::time::Duration::from_secs(30));

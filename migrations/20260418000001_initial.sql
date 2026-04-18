@@ -1,16 +1,22 @@
--- Tracks indexed markdown files for incremental reindex
+-- migrations/20260418000001_initial.sql
+
+-- Tracks indexed markdown files for incremental reindex.
 CREATE TABLE files (
     path  TEXT PRIMARY KEY,
     mtime REAL NOT NULL
 );
-CREATE INDEX idx_files_path ON files(path);
+-- No explicit idx_files_path: the PRIMARY KEY already provides a unique B-tree.
 
--- Full-text search index (BM25 ranking built in)
+-- Full-text search index (BM25 ranking built in).
+-- Duplicates file/heading/content with chunk_map; keeping FTS5 in "contentless"
+-- mirror mode is phase-2 polish. Both tables are written in one transaction
+-- from the indexer, so divergence is bounded.
 CREATE VIRTUAL TABLE chunks USING fts5(
     file, heading, content
 );
 
--- Canonical chunk storage with metadata
+-- Canonical chunk storage with metadata.
+-- tags: comma-separated (format stabilises in a later task).
 CREATE TABLE chunk_map (
     id            INTEGER PRIMARY KEY AUTOINCREMENT,
     file          TEXT NOT NULL,
@@ -22,10 +28,13 @@ CREATE TABLE chunk_map (
     access_count  INTEGER NOT NULL DEFAULT 0,
     last_accessed TEXT NOT NULL DEFAULT ''
 );
-CREATE INDEX idx_chunk_map_file ON chunk_map(file);
-CREATE INDEX idx_chunk_map_source_type ON chunk_map(source_type);
+CREATE INDEX idx_chunk_map_file          ON chunk_map(file);
+CREATE INDEX idx_chunk_map_source_type   ON chunk_map(source_type);
+-- Composite index for the (file, heading) lookup pattern in search.rs
+-- after BM25 hits resolve to source_type / metadata.
+CREATE INDEX idx_chunk_map_file_heading  ON chunk_map(file, heading);
 
--- Search telemetry
+-- Search telemetry. Unbounded by design in v1; a retention cron is phase-2.
 CREATE TABLE search_log (
     id           INTEGER PRIMARY KEY AUTOINCREMENT,
     ts           TEXT NOT NULL,
@@ -37,7 +46,7 @@ CREATE TABLE search_log (
 );
 CREATE INDEX idx_search_log_ts ON search_log(ts);
 
--- Model metadata (reserved for phase-2 vector drift detection)
+-- Model metadata (reserved for phase-2 vector drift detection).
 CREATE TABLE meta (
     key   TEXT PRIMARY KEY,
     value TEXT NOT NULL
