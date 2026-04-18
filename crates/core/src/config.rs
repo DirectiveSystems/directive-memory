@@ -49,7 +49,9 @@ impl Config {
             builder = builder.add_source(::config::File::from(p).required(true));
         }
         builder = builder.add_source(
-            ::config::Environment::with_prefix("DM").separator("__")
+            ::config::Environment::with_prefix("DM")
+                .prefix_separator("_")
+                .separator("__"),
         );
         let mut cfg: Config = builder.build()?.try_deserialize()?;
         cfg.memory_dir = expand(&cfg.memory_dir);
@@ -84,14 +86,14 @@ mod tests {
     #[test]
     fn expands_tilde_in_paths() {
         let home = std::env::var("HOME").unwrap();
-        // Env source uses `__` separator, so prefix separator is also `__`.
-        std::env::set_var("DM__MEMORY_DIR", "~/dm-test-notes");
-        std::env::set_var("DM__DB_PATH", "~/dm-test-db.sqlite");
-        std::env::set_var("DM__API_KEY", "x");
+        // Prefix separator is `_`, nested separator is `__`.
+        std::env::set_var("DM_MEMORY_DIR", "~/dm-test-notes");
+        std::env::set_var("DM_DB_PATH", "~/dm-test-db.sqlite");
+        std::env::set_var("DM_API_KEY", "x");
         let cfg = Config::load(None).unwrap();
-        std::env::remove_var("DM__MEMORY_DIR");
-        std::env::remove_var("DM__DB_PATH");
-        std::env::remove_var("DM__API_KEY");
+        std::env::remove_var("DM_MEMORY_DIR");
+        std::env::remove_var("DM_DB_PATH");
+        std::env::remove_var("DM_API_KEY");
         assert_eq!(cfg.memory_dir, PathBuf::from(format!("{home}/dm-test-notes")));
         assert_eq!(cfg.db_path, PathBuf::from(format!("{home}/dm-test-db.sqlite")));
     }
