@@ -1,6 +1,26 @@
+//! Markdown chunker.
+//!
+//! Splits a document by h1-h4 headings into `Chunk` records; sections longer
+//! than `MAX_CHUNK_CHARS` are further subdivided by paragraph grouping.
+//! Pure functions, no I/O. Semantics mirror the Python reference at
+//! `claude-ops/scripts/jeeves_lib/memory_search.py` (`_parse_chunks` /
+//! `_split_by_paragraphs`).
+//!
+//! Known limitation: we don't track markdown code fences, so `##` lines
+//! inside a ```` ``` ```` block are mis-classified as headings. Acceptable
+//! for v1 — matches Python behaviour — but worth revisiting if docs with
+//! markdown-inside-fences become common in the indexed corpus.
+
 use once_cell::sync::Lazy;
 use regex::Regex;
 
+/// Soft cap on chunk size, measured in **bytes** (not characters).
+///
+/// For ASCII-heavy markdown this is ~200 tokens. For CJK or emoji text a
+/// single character may be 3-4 bytes, so chunks end up smaller than the
+/// name suggests. We keep the name `CHARS` to mirror the Python reference,
+/// which uses `len(str)` (code-point count) — the divergence is known and
+/// accepted for v1 since BM25 tokenization is byte-oriented anyway.
 pub const MAX_CHUNK_CHARS: usize = 800;
 
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -134,5 +154,40 @@ mod tests {
         let chunks = parse_chunks("# Small\nshort content here\n");
         assert_eq!(chunks.len(), 1);
         assert_eq!(chunks[0].heading, "Small");
+    }
+
+    #[test]
+    fn hard_split_fires_on_single_huge_paragraph() {
+        // One paragraph with many short lines and no blank lines.
+        // Total bytes must exceed MAX_CHUNK_CHARS * 2 so the hard-split
+        // `while buf_chars > max_chars * 2` loop fires.
+        let huge_paragraph = (0..500)
+            .map(|i| format!("line {i} with some content here"))
+            .collect::<Vec<_>>()
+            .join("\n");
+        let md = format!("# Giant\n{huge_paragraph}\n");
+        let chunks = parse_chunks(&md);
+        assert!(chunks.len() >= 2, "hard-split path should produce multiple chunks");
+        for c in &chunks {
+            assert!(
+                c.content.len() <= MAX_CHUNK_CHARS * 2,
+                "each chunk content must stay within the 2x bound; got {}",
+                c.content.len()
+            );
+        }
+    }
+
+    #[test]
+    fn many_small_paragraphs_cluster_into_one_chunk() {
+        // 10 tiny paragraphs (~20 bytes each) summing to well under MAX_CHUNK_CHARS.
+        // Should come back as exactly one chunk (section-level, not subdivided).
+        let paragraphs: Vec<String> = (0..10).map(|i| format!("short para {i}.")).collect();
+        let md = format!("# Cluster\n{}\n", paragraphs.join("\n\n"));
+        let chunks = parse_chunks(&md);
+        assert_eq!(chunks.len(), 1, "small paragraphs should not subdivide");
+        assert_eq!(chunks[0].heading, "Cluster");
+        for p in &paragraphs {
+            assert!(chunks[0].content.contains(p), "missing paragraph: {p}");
+        }
     }
 }
