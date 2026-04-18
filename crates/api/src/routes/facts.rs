@@ -15,6 +15,6 @@ pub async fn add(
     State(state): State<AppState>,
     Json(body): Json<FactBody>,
 ) -> Result<Json<OkResponse>, ApiError> {
-    state.core.add_fact(&body.file, &body.section, &body.fact)?;
+    state.core.add_fact(&body.file, &body.section, &body.fact).await?;
     Ok(Json(OkResponse { ok: true, path: body.file }))
 }

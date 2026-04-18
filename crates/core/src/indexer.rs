@@ -66,6 +66,17 @@ async fn needs_reindex(pool: &SqlitePool, rel: &str, mtime: f64) -> Result<bool>
     Ok(match row { None => true, Some((old,)) => old < mtime })
 }
 
+/// Re-index a single file after a disk write. If the file no longer exists
+/// on disk (e.g. an external delete) the entry is pruned from the index.
+pub async fn reindex_path(pool: &SqlitePool, path: &Path, rel: &str) -> Result<()> {
+    if path.exists() {
+        let mtime = mtime_of(path)?;
+        index_file(pool, path, rel, mtime).await
+    } else {
+        delete_file(pool, rel).await
+    }
+}
+
 async fn index_file(pool: &SqlitePool, path: &Path, rel: &str, mtime: f64) -> Result<()> {
     let text = std::fs::read_to_string(path)?;
     let chunks = chunker::parse_chunks(&text);

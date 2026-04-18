@@ -38,7 +38,7 @@ pub async fn write(
     Path(path): Path<String>,
     Json(body): Json<WriteBody>,
 ) -> Result<Json<OkResponse>, ApiError> {
-    state.core.write_file(&path, &body.content, false)?;
+    state.core.write_file(&path, &body.content, false).await?;
     Ok(Json(OkResponse { ok: true, path }))
 }
 
@@ -47,6 +47,6 @@ pub async fn append(
     Path(path): Path<String>,
     Json(body): Json<WriteBody>,
 ) -> Result<Json<OkResponse>, ApiError> {
-    state.core.write_file(&path, &body.content, true)?;
+    state.core.write_file(&path, &body.content, true).await?;
     Ok(Json(OkResponse { ok: true, path }))
 }

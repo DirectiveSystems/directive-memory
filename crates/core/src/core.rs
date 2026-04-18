@@ -38,11 +38,17 @@ impl Core {
 
     pub async fn stats(&self) -> Result<Stats> { stats::gather(&self.pool).await }
 
-    pub fn write_file(&self, rel_path: &str, content: &str, append: bool) -> Result<()> {
-        writeback::write_file(&self.config.memory_dir, rel_path, content, append)
+    pub async fn write_file(&self, rel_path: &str, content: &str, append: bool) -> Result<()> {
+        writeback::write_file(&self.config.memory_dir, rel_path, content, append)?;
+        let rel = rel_path.trim().trim_start_matches('/');
+        let full = self.config.memory_dir.join(rel);
+        indexer::reindex_path(&self.pool, &full, rel).await
     }
-    pub fn add_fact(&self, rel_path: &str, section: &str, fact: &str) -> Result<()> {
-        writeback::add_fact(&self.config.memory_dir, rel_path, section, fact)
+    pub async fn add_fact(&self, rel_path: &str, section: &str, fact: &str) -> Result<()> {
+        writeback::add_fact(&self.config.memory_dir, rel_path, section, fact)?;
+        let rel = rel_path.trim().trim_start_matches('/');
+        let full = self.config.memory_dir.join(rel);
+        indexer::reindex_path(&self.pool, &full, rel).await
     }
 
     pub async fn list_files(&self) -> Result<Vec<(String, f64)>> {

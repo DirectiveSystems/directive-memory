@@ -120,7 +120,7 @@ impl MemoryServer {
 
     #[tool(description = "Write or append to a memory file")]
     pub async fn write_memory(&self, #[tool(aggr)] args: WriteMemoryArgs) -> String {
-        match self.core.write_file(&args.file_path, &args.content, args.append) {
+        match self.core.write_file(&args.file_path, &args.content, args.append).await {
             Ok(()) => format!(
                 "{} {}",
                 if args.append { "Appended to" } else { "Wrote" },
@@ -132,7 +132,7 @@ impl MemoryServer {
 
     #[tool(description = "Add a fact as a bullet under a section in a memory file")]
     pub async fn add_fact(&self, #[tool(aggr)] args: AddFactArgs) -> String {
-        match self.core.add_fact(&args.file_path, &args.section, &args.fact) {
+        match self.core.add_fact(&args.file_path, &args.section, &args.fact).await {
             Ok(()) => format!("Added fact to {} under '{}'", args.file_path, args.section),
             Err(e) => format!("error: {e}"),
         }
