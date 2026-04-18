@@ -13,15 +13,22 @@ use std::sync::Arc;
 pub struct Core {
     pub config: Arc<Config>,
     pub pool: SqlitePool,
+    reindex_lock: Arc<tokio::sync::Mutex<()>>,
 }
 
 impl Core {
     pub async fn open(config: Config) -> anyhow::Result<Self> {
         let pool = crate::db::open(&config.db_path).await?;
-        Ok(Self { config: Arc::new(config), pool })
+        Ok(Self {
+            config: Arc::new(config),
+            pool,
+            reindex_lock: Arc::new(tokio::sync::Mutex::new(())),
+        })
     }
 
+    /// Concurrent callers block here; the second will run when the first returns.
     pub async fn reindex(&self) -> Result<IndexReport> {
+        let _guard = self.reindex_lock.lock().await;
         indexer::reindex(&self.pool, &self.config.index_roots()).await
     }
 
