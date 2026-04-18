@@ -12,12 +12,11 @@ use state::AppState;
 
 pub fn build_router(core: Core) -> Router {
     let state = AppState { core };
-    // Placeholder /api route so the middleware layer attaches correctly even
-    // before real routes land in Task 12. It is replaced with the full suite there.
     // The fallback ensures auth middleware fires for unknown /api/* paths too —
-    // without it, an unknown path would 404 before auth runs.
+    // without it, an unknown path would 404 before auth runs and leak which
+    // routes exist to unauthenticated callers.
     let api = Router::new()
-        .route("/_placeholder", get(|| async { "" }))
+        .route("/search", get(routes::search::handler))
         .fallback(|| async { StatusCode::NOT_FOUND })
         .layer(middleware::from_fn_with_state(state.clone(), auth::require_api_key))
         .with_state(state.clone());
