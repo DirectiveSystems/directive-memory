@@ -5,5 +5,6 @@ pub mod error;
 pub mod indexer;
 pub mod search;
 pub mod source_type;
+pub mod stats;
 pub mod writeback;
 pub use error::{CoreError, Result};
