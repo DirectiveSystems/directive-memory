@@ -17,6 +17,11 @@ pub fn build_router(core: Core) -> Router {
     // routes exist to unauthenticated callers.
     let api = Router::new()
         .route("/search", get(routes::search::handler))
+        .route("/files", get(routes::files::list))
+        .route("/files/*path",
+            get(routes::files::read)
+                .post(routes::files::write)
+                .patch(routes::files::append))
         .fallback(|| async { StatusCode::NOT_FOUND })
         .layer(middleware::from_fn_with_state(state.clone(), auth::require_api_key))
         .with_state(state.clone());
