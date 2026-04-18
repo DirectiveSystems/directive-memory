@@ -27,10 +27,10 @@ pub fn build_router(core: Core) -> Router {
         .route("/reindex", post(routes::stats::reindex))
         .fallback(|| async { StatusCode::NOT_FOUND })
         .layer(middleware::from_fn_with_state(state.clone(), auth::require_api_key))
-        .with_state(state.clone());
+        .with_state(state);
 
     Router::new()
         .route("/healthz", get(|| async { "ok" }))
         .nest("/api", api)
-        .with_state(state)
+        .merge(routes::static_ui::router())
 }

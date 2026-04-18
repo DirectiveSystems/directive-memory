@@ -35,3 +35,15 @@ async fn api_routes_reject_missing_api_key() {
     ).await.unwrap();
     assert_eq!(resp.status(), StatusCode::UNAUTHORIZED);
 }
+
+#[tokio::test]
+async fn root_serves_index_html() {
+    let (_d, app) = setup().await;
+    let resp = app.oneshot(
+        axum::http::Request::builder().uri("/").body(axum::body::Body::empty()).unwrap()
+    ).await.unwrap();
+    assert_eq!(resp.status(), axum::http::StatusCode::OK);
+    let bytes = http_body_util::BodyExt::collect(resp.into_body()).await.unwrap().to_bytes();
+    let body = std::str::from_utf8(&bytes).unwrap();
+    assert!(body.contains("Directive Memory"));
+}
