@@ -23,6 +23,27 @@ fn default_top_k() -> i64 {
     5
 }
 
+#[derive(Debug, Deserialize, schemars::JsonSchema)]
+pub struct WriteMemoryArgs {
+    /// Relative path within memory_dir (e.g., "projects/sift.md")
+    pub file_path: String,
+    /// Markdown content to write
+    pub content: String,
+    /// If true, append. If false (default), overwrite.
+    #[serde(default)]
+    pub append: bool,
+}
+
+#[derive(Debug, Deserialize, schemars::JsonSchema)]
+pub struct AddFactArgs {
+    /// Relative path within memory_dir (e.g., "learnings.md")
+    pub file_path: String,
+    /// Section heading (e.g., "## Patterns")
+    pub section: String,
+    /// Fact to add (formatted as "- <fact>")
+    pub fact: String,
+}
+
 #[derive(Clone)]
 pub struct MemoryServer {
     pub core: Core,
@@ -93,6 +114,26 @@ impl MemoryServer {
                 }
                 out
             }
+            Err(e) => format!("error: {e}"),
+        }
+    }
+
+    #[tool(description = "Write or append to a memory file")]
+    pub async fn write_memory(&self, #[tool(aggr)] args: WriteMemoryArgs) -> String {
+        match self.core.write_file(&args.file_path, &args.content, args.append) {
+            Ok(()) => format!(
+                "{} {}",
+                if args.append { "Appended to" } else { "Wrote" },
+                args.file_path
+            ),
+            Err(e) => format!("error: {e}"),
+        }
+    }
+
+    #[tool(description = "Add a fact as a bullet under a section in a memory file")]
+    pub async fn add_fact(&self, #[tool(aggr)] args: AddFactArgs) -> String {
+        match self.core.add_fact(&args.file_path, &args.section, &args.fact) {
+            Ok(()) => format!("Added fact to {} under '{}'", args.file_path, args.section),
             Err(e) => format!("error: {e}"),
         }
     }
