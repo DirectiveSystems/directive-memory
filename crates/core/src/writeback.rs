@@ -12,11 +12,26 @@ fn validate(root: &Path, rel_path: &str) -> Result<PathBuf> {
         return Err(CoreError::InvalidPath(rel_path.to_string()));
     }
     let full = root.join(rel);
-    let canon_root = fs::canonicalize(root).unwrap_or_else(|_| root.to_path_buf());
-    if let Ok(canon_full) = fs::canonicalize(&full) {
-        if !canon_full.starts_with(&canon_root) {
-            return Err(CoreError::InvalidPath(rel_path.to_string()));
+
+    // Reject any existing symlink in the final path.
+    if let Ok(md) = fs::symlink_metadata(&full) {
+        if md.file_type().is_symlink() {
+            return Err(CoreError::InvalidPath(format!("{rel_path} (symlink)")));
         }
+    }
+
+    // Canonicalize the *parent directory* (which may not yet exist — walk upward until we find one that does).
+    // Any existing ancestor must resolve to a subpath of the canonical root.
+    let canon_root = fs::canonicalize(root).map_err(CoreError::Io)?;
+    let mut parent = full.parent();
+    while let Some(p) = parent {
+        if let Ok(canon_parent) = fs::canonicalize(p) {
+            if !canon_parent.starts_with(&canon_root) {
+                return Err(CoreError::InvalidPath(format!("{rel_path} (escapes root)")));
+            }
+            break;
+        }
+        parent = p.parent();
     }
     Ok(full)
 }

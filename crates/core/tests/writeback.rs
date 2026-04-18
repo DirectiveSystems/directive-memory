@@ -67,3 +67,30 @@ fn add_fact_appends_new_section_when_heading_absent() {
     assert!(body.contains("## New"));
     assert!(body.contains("- added"));
 }
+
+#[test]
+#[cfg(unix)]
+fn rejects_write_through_symlink_to_outside_root() {
+    let dir = tempdir().unwrap();
+    let outside = tempdir().unwrap();
+    // Create a symlink INSIDE memory dir pointing to a file outside it.
+    std::os::unix::fs::symlink(outside.path().join("target.md"),
+        dir.path().join("sneak.md")).unwrap();
+    let err = writeback::write_file(dir.path(), "sneak.md", "x", false);
+    assert!(err.is_err(), "must reject writing through a symlink");
+    assert!(!outside.path().join("target.md").exists(),
+        "target file must not have been created");
+}
+
+#[test]
+#[cfg(unix)]
+fn rejects_write_into_directory_symlink() {
+    let dir = tempdir().unwrap();
+    let outside = tempdir().unwrap();
+    // Symlink a subdirectory inside memory_dir pointing at an outside directory.
+    std::os::unix::fs::symlink(outside.path(), dir.path().join("escape")).unwrap();
+    let err = writeback::write_file(dir.path(), "escape/sneaky.md", "x", false);
+    assert!(err.is_err());
+    assert!(!outside.path().join("sneaky.md").exists(),
+        "file must not have been written into the symlinked directory");
+}

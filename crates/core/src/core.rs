@@ -52,6 +52,23 @@ impl Core {
             return Err(crate::error::CoreError::InvalidPath(rel_path.into()));
         }
         let full = root.join(rel);
+        if let Ok(md) = std::fs::symlink_metadata(&full) {
+            if md.file_type().is_symlink() {
+                return Err(crate::error::CoreError::InvalidPath(format!(
+                    "{rel_path} (symlink)"
+                )));
+            }
+        }
+        // Also verify the canonicalized full path is under the canonical root.
+        if let Ok(canon_full) = std::fs::canonicalize(&full) {
+            if let Ok(canon_root) = std::fs::canonicalize(root) {
+                if !canon_full.starts_with(&canon_root) {
+                    return Err(crate::error::CoreError::InvalidPath(format!(
+                        "{rel_path} (escapes root)"
+                    )));
+                }
+            }
+        }
         Ok(std::fs::read_to_string(full)?)
     }
 }
