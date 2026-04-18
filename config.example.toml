@@ -1,0 +1,14 @@
+# Directive Memory config. All fields optional — defaults shown.
+
+memory_dir = "./memory"
+db_path    = "./data/memory.db"
+port       = 3001
+bind       = "127.0.0.1"
+
+# Generate with: openssl rand -hex 32
+api_key = ""
+
+# Optional additional roots, e.g. an Obsidian vault.
+# [[extra_dirs]]
+# dir    = "/home/you/second_brain"
+# prefix = "vault/"
