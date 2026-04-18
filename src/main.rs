@@ -31,7 +31,13 @@ enum Command {
 
 #[tokio::main]
 async fn main() -> Result<()> {
+    // Route logs to stderr. stdout is reserved for `mcp` JSON-RPC and `search`
+    // JSON output; any stray log line there corrupts the protocol.
+    use std::io::IsTerminal;
+    let ansi = std::io::stderr().is_terminal();
     tracing_subscriber::fmt()
+        .with_writer(std::io::stderr)
+        .with_ansi(ansi)
         .with_env_filter(
             tracing_subscriber::EnvFilter::try_from_default_env()
                 .unwrap_or_else(|_| "info".into())
@@ -44,7 +50,14 @@ async fn main() -> Result<()> {
 
     match cli.command {
         Command::Serve => serve(core).await?,
-        Command::Mcp => dm_mcp::run_stdio(core).await?,
+        Command::Mcp => {
+            // Startup reindex so files edited while the MCP client wasn't
+            // connected are searchable on the first tool call. Mtime-diffed,
+            // so this is near-instant on a stable corpus.
+            let r = core.reindex().await?;
+            tracing::info!(indexed = r.files_indexed, pruned = r.files_pruned, "mcp startup reindex");
+            dm_mcp::run_stdio(core).await?
+        }
         Command::Reindex => {
             let r = core.reindex().await?;
             println!("indexed {} files, pruned {}", r.files_indexed, r.files_pruned);
