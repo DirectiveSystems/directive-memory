@@ -6,7 +6,7 @@ pub mod routes;
 pub mod state;
 
 use axum::http::StatusCode;
-use axum::{middleware, routing::get, Router};
+use axum::{middleware, routing::{get, post}, Router};
 use dm_core::Core;
 use state::AppState;
 
@@ -22,6 +22,7 @@ pub fn build_router(core: Core) -> Router {
             get(routes::files::read)
                 .post(routes::files::write)
                 .patch(routes::files::append))
+        .route("/facts", post(routes::facts::add))
         .fallback(|| async { StatusCode::NOT_FOUND })
         .layer(middleware::from_fn_with_state(state.clone(), auth::require_api_key))
         .with_state(state.clone());
