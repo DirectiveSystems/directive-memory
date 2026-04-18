@@ -22,3 +22,4 @@ toml.workspace = true
 [dev-dependencies]
 tokio = { workspace = true, features = ["rt-multi-thread", "macros", "fs", "io-util", "signal", "test-util"] }
 tempfile = "3"
+filetime = "0.2"

@@ -60,7 +60,11 @@ pub async fn search(pool: &SqlitePool, q: &SearchQuery) -> Result<Vec<SearchHit>
             if &h.source_type != st { return false; }
         }
         true
-    }).take(top_k as usize).collect();
+    }).collect();
+
+    let filtered = apply_temporal_decay(pool, filtered).await?;
+    log_search(pool, &sanitized, top_k, &filtered).await?;
+    let filtered: Vec<SearchHit> = filtered.into_iter().take(top_k as usize).collect();
 
     Ok(filtered)
 }
@@ -70,4 +74,42 @@ fn truncate(s: &str, max: usize) -> String {
     let mut end = max;
     while !s.is_char_boundary(end) { end -= 1; }
     s[..end].to_string()
+}
+
+async fn apply_temporal_decay(pool: &SqlitePool, mut hits: Vec<SearchHit>) -> Result<Vec<SearchHit>> {
+    use std::collections::{HashMap, HashSet};
+    if hits.is_empty() { return Ok(hits); }
+    let files: Vec<String> = hits.iter().map(|h| h.file.clone())
+        .collect::<HashSet<_>>().into_iter().collect();
+    let mut mtimes: HashMap<String, f64> = HashMap::new();
+    for f in &files {
+        if let Some((mt,)) = sqlx::query_as::<_, (f64,)>("SELECT mtime FROM files WHERE path = ?1")
+            .bind(f).fetch_optional(pool).await? { mtimes.insert(f.clone(), mt); }
+    }
+    let now = chrono::Utc::now().timestamp() as f64;
+    let half_life_days = 90.0_f64;
+    for h in &mut hits {
+        if let Some(mt) = mtimes.get(&h.file) {
+            let days_old = ((now - mt) / 86_400.0).max(0.0);
+            let decay = 0.5_f64.powf(days_old / half_life_days);
+            h.score *= 0.5 + 0.5 * decay;
+        }
+    }
+    hits.sort_by(|a, b| b.score.partial_cmp(&a.score).unwrap_or(std::cmp::Ordering::Equal));
+    Ok(hits)
+}
+
+async fn log_search(pool: &SqlitePool, query: &str, top_k: i64, hits: &[SearchHit]) -> Result<()> {
+    let ts = chrono::Utc::now().to_rfc3339();
+    let top3: Vec<serde_json::Value> = hits.iter().take(3).map(|h| serde_json::json!({
+        "file": h.file, "heading": h.heading, "score": h.score,
+    })).collect();
+    let top_results = serde_json::to_string(&top3).unwrap_or_else(|_| "[]".into());
+    sqlx::query(
+        "INSERT INTO search_log (ts, query, mode, top_k, result_count, top_results) \
+         VALUES (?1, ?2, 'bm25', ?3, ?4, ?5)"
+    )
+    .bind(ts).bind(query).bind(top_k).bind(hits.len() as i64).bind(top_results)
+    .execute(pool).await?;
+    Ok(())
 }
