@@ -23,6 +23,8 @@ pub fn build_router(core: Core) -> Router {
                 .post(routes::files::write)
                 .patch(routes::files::append))
         .route("/facts", post(routes::facts::add))
+        .route("/stats", get(routes::stats::stats))
+        .route("/reindex", post(routes::stats::reindex))
         .fallback(|| async { StatusCode::NOT_FOUND })
         .layer(middleware::from_fn_with_state(state.clone(), auth::require_api_key))
         .with_state(state.clone());
