@@ -17,10 +17,27 @@ Part of [Directive Systems](https://directive.systems).
 - **Write-back** — AI clients can add facts, not just read them
 - **Self-hosted** — nothing leaves your machine
 
+## Install
+
+Prebuilt binaries for Linux (x86_64) and macOS (arm64, x86_64) are attached to
+every [GitHub release](https://github.com/DirectiveSystems/directive-memory/releases):
+
+```bash
+# Replace the URL with the asset matching your platform.
+curl -L https://github.com/DirectiveSystems/directive-memory/releases/latest/download/directive-memory-v0.1.0-x86_64-unknown-linux-gnu.tar.gz \
+  | tar -xz
+sudo mv directive-memory-*/directive-memory /usr/local/bin/
+```
+
+Or build from source:
+
+```bash
+cargo install --path .
+```
+
 ## Quickstart
 
 ```bash
-cargo install --path .                        # or download a release binary
 mkdir -p ~/notes
 printf '# Hello\nMy first note.\n' > ~/notes/hello.md
 
