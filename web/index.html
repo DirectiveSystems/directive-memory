@@ -1,1 +1,36 @@
-<!doctype html><title>Directive Memory</title><h1>placeholder</h1>
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Directive Memory</title>
+  <link rel="stylesheet" href="/styles.css">
+  <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/dompurify/dist/purify.min.js"></script>
+</head>
+<body>
+  <header>
+    <h1>Directive Memory</h1>
+    <form id="search-form">
+      <input id="q" type="search" placeholder="Search your knowledge…" autofocus>
+      <input id="apikey" type="password" placeholder="API key" aria-label="API key">
+      <button type="submit">Search</button>
+    </form>
+  </header>
+  <main>
+    <aside id="sidebar">
+      <h2>Files</h2>
+      <ul id="file-list"></ul>
+    </aside>
+    <section id="results">
+      <h2>Results</h2>
+      <ol id="hits"></ol>
+    </section>
+    <section id="viewer">
+      <h2 id="viewer-title">Select a file</h2>
+      <article id="viewer-body"></article>
+    </section>
+  </main>
+  <script src="/app.js"></script>
+</body>
+</html>

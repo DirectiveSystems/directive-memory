@@ -1,0 +1,21 @@
+* { box-sizing: border-box; }
+body { margin: 0; font: 14px/1.5 -apple-system, system-ui, sans-serif; color: #111; background: #fafafa; }
+header { padding: 12px 20px; background: #fff; border-bottom: 1px solid #e0e0e0; display: flex; align-items: center; gap: 16px; }
+header h1 { font-size: 16px; margin: 0; }
+form { display: flex; gap: 8px; flex: 1; }
+input[type="search"] { flex: 1; padding: 8px 10px; border: 1px solid #ccc; border-radius: 4px; }
+input[type="password"] { width: 200px; padding: 8px; border: 1px solid #ccc; border-radius: 4px; }
+button { padding: 8px 14px; background: #111; color: #fff; border: 0; border-radius: 4px; cursor: pointer; }
+main { display: grid; grid-template-columns: 240px 1fr 1fr; gap: 16px; padding: 16px; }
+aside, section { background: #fff; border: 1px solid #e0e0e0; border-radius: 6px; padding: 12px 14px; max-height: calc(100vh - 100px); overflow: auto; }
+#file-list { list-style: none; padding: 0; margin: 0; }
+#file-list li { padding: 4px 6px; border-radius: 4px; cursor: pointer; color: #333; }
+#file-list li:hover { background: #f0f0f0; }
+#hits { list-style: decimal; padding-left: 20px; }
+#hits li { margin-bottom: 12px; }
+#hits .file { font-weight: 600; color: #0366d6; cursor: pointer; }
+#hits .heading { color: #555; font-size: 13px; }
+#hits .snippet { color: #444; margin-top: 4px; white-space: pre-wrap; }
+#viewer-body { font-size: 14px; }
+#viewer-body pre { background: #f6f8fa; padding: 10px; border-radius: 4px; overflow: auto; }
+.error { color: #c00; }
