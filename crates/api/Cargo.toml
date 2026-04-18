@@ -1,0 +1,25 @@
+[package]
+name = "dm-api"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+
+[dependencies]
+dm-core.workspace = true
+tokio.workspace = true
+serde.workspace = true
+serde_json.workspace = true
+thiserror.workspace = true
+anyhow.workspace = true
+chrono.workspace = true
+tracing.workspace = true
+axum = { version = "0.7", features = ["macros"] }
+tower = "0.4"
+tower-http = { version = "0.5", features = ["trace", "cors"] }
+mime_guess = "2"
+rust-embed = "8"
+
+[dev-dependencies]
+tempfile = "3"
+tower = { version = "0.4", features = ["util"] }
+http-body-util = "0.1"
