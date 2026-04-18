@@ -12,5 +12,5 @@ serde_json.workspace = true
 anyhow.workspace = true
 thiserror.workspace = true
 tracing.workspace = true
-rmcp = { version = "0.1", features = ["server", "transport-io"] }
+rmcp = { version = "0.1", features = ["server", "transport-io", "macros"] }
 schemars = "0.8"

@@ -1,8 +1,27 @@
-use dm_core::Core;
+use dm_core::{search::SearchQuery, Core};
 use rmcp::{
     model::{Implementation, ServerInfo},
-    ServerHandler,
+    schemars, tool, ServerHandler,
 };
+use serde::Deserialize;
+
+#[derive(Debug, Deserialize, schemars::JsonSchema)]
+pub struct SearchArgs {
+    /// Search query text
+    pub query: String,
+    /// Number of results to return
+    #[serde(default = "default_top_k")]
+    pub top_k: i64,
+    /// Only return results from files matching this prefix
+    #[serde(default)]
+    pub filter_file: String,
+    /// Only return results with this source type (memory|project|vault|contact)
+    #[serde(default)]
+    pub filter_source_type: String,
+}
+fn default_top_k() -> i64 {
+    5
+}
 
 #[derive(Clone)]
 pub struct MemoryServer {
@@ -15,6 +34,71 @@ impl MemoryServer {
     }
 }
 
+#[tool(tool_box)]
+impl MemoryServer {
+    #[tool(description = "BM25 search over memory files")]
+    pub async fn search_memory(&self, #[tool(aggr)] args: SearchArgs) -> String {
+        let q = SearchQuery {
+            query: args.query.clone(),
+            top_k: args.top_k,
+            filter_file: args.filter_file,
+            filter_source_type: if args.filter_source_type.is_empty() {
+                None
+            } else {
+                Some(args.filter_source_type)
+            },
+        };
+        let hits = match self.core.search(&q).await {
+            Ok(h) => h,
+            Err(e) => return format!("error: {e}"),
+        };
+        if hits.is_empty() {
+            return format!("No results for '{}'.", args.query);
+        }
+        let mut out = format!("{} results for '{}':\n\n", hits.len(), args.query);
+        for h in hits {
+            out.push_str(&format!(
+                "[{}] {}\n  {}\n\n",
+                h.file,
+                h.heading,
+                h.content.chars().take(200).collect::<String>()
+            ));
+        }
+        out
+    }
+
+    #[tool(description = "List indexed memory files")]
+    pub async fn list_memory_files(&self) -> String {
+        match self.core.list_files().await {
+            Ok(files) if files.is_empty() => "No memory files indexed.".into(),
+            Ok(files) => files
+                .into_iter()
+                .map(|(p, _)| format!("- {p}"))
+                .collect::<Vec<_>>()
+                .join("\n"),
+            Err(e) => format!("error: {e}"),
+        }
+    }
+
+    #[tool(description = "Get index statistics")]
+    pub async fn get_memory_stats(&self) -> String {
+        match self.core.stats().await {
+            Ok(s) => {
+                let mut out = format!(
+                    "Chunks: {}\nFiles: {}\nSearch log: {} total, {} last 7 days\n\nSource types:\n",
+                    s.chunks, s.files, s.search_log_total, s.search_log_last_7d
+                );
+                for (k, v) in s.source_types {
+                    out.push_str(&format!("  {k}: {v}\n"));
+                }
+                out
+            }
+            Err(e) => format!("error: {e}"),
+        }
+    }
+}
+
+#[tool(tool_box)]
 impl ServerHandler for MemoryServer {
     fn get_info(&self) -> ServerInfo {
         ServerInfo {
