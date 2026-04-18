@@ -1,1 +1,4 @@
-//! Directive Memory core: domain, search, and storage.
+//! Directive Memory core.
+pub mod db;
+pub mod error;
+pub use error::{CoreError, Result};
